@@ -2,7 +2,14 @@
 
 ## Overview
 
-This project is a robust, multi-threaded tool for generating and analyzing all possible Turkish Airlines flight routes that visit all 6 continents, specifically designed for the [Turkish Airlines 1 Million Miles Challenge](https://www.turkishairlines.com/en-int/miles-and-smiles/campaigns/fly-across-6-continents-Earn-1-million-miles/). It was developed by extensively modifying and extending the [google-flights-scraper](https://github.com/hugoglvs/google-flights-scraper/) library to support advanced route generation, flight search, and robust, resumable execution.
+Th3. **Run the Tool**
+   ```bash
+   python3 comprehensive_flight_search.py
+   ```
+   - The tool will generate all valid routes and begin searching for Turkish Airlines flights for each segment.
+   - Progress and results are saved continuously. You can safely interrupt and resume at any time.
+
+4. **Review Results**ct is a robust, multi-threaded tool for generating and analyzing all possible Turkish Airlines flight routes that visit all 6 continents, specifically designed for the [Turkish Airlines 1 Million Miles Challenge](https://www.turkishairlines.com/en-int/miles-and-smiles/campaigns/fly-across-6-continents-Earn-1-million-miles/). It was developed by extensively modifying and extending the [google-flights-scraper](https://github.com/hugoglvs/google-flights-scraper/) library to support advanced route generation, flight search, and robust, resumable execution.
 
 ---
 
@@ -32,7 +39,13 @@ This project is a robust, multi-threaded tool for generating and analyzing all p
 - **Human-Readable Summaries:** The tool prints summaries of the best routes, progress statistics, and efficiency metrics to the console.
 - **Efficiency Stats:** Reports on early termination savings, processing speed, and completion rates.
 
-### 6. **Extensive Modifications & Improvements**
+### 6. **Flexible Date Configuration**
+- **Centralized Date Management:** Configure departure date in one place in the `main()` function for all flights.
+- **Multiple Date Formats:** Supports various input formats (e.g., "2 Oct 2025", "2025-10-02", "October 2, 2025").
+- **Automatic Format Conversion:** Automatically converts to proper formats for search logic and Google Flights interface.
+- **No Leading Zeros:** Properly formats single-digit dates without leading zeros (e.g., "October 2, 2025" not "October 02, 2025").
+
+### 7. **Extensive Modifications & Improvements**
 - **Full Combinatorial Route Coverage:** Implements `generate_all_possible_combinations` for exhaustive route generation.
 - **Robust Error Handling:** Handles all exceptions gracefully, marking failed routes as processed to avoid infinite retries.
 - **Atomic File Writes:** Ensures no data loss even if the process is killed or crashes.
@@ -42,11 +55,38 @@ This project is a robust, multi-threaded tool for generating and analyzing all p
 
 ## Usage
 
+### Setting Your Departure Date
+
+Before running the tool, you can easily configure your preferred departure date by editing **one line** in the `main()` function:
+
+```python
+# In comprehensive_flight_search.py, main() function:
+departure_date = "2 Oct 2025"  # Change this to your preferred date
+```
+
+**Supported Date Formats:**
+- `"2 Oct 2025"` (recommended)
+- `"2025-10-02"`
+- `"October 2, 2025"`
+- `"02/10/2025"`
+- `"25 Dec 2025"`
+- And more standard formats...
+
+The system automatically converts your input to the correct formats:
+- Search logic uses: `"Thu, Oct 2"` (short format)
+- Google Flights uses: `"October 2, 2025"` (full format)
+
+### Running the Tool
+
 1. **Install Dependencies**
    - Clone this repo and install requirements (see `requirements.txt`).
    - Ensure you have Python 3.9+.
 
-2. **Run the Tool**
+2. **Configure Departure Date** (Optional)
+   - Edit the `departure_date` variable in the `main()` function of `comprehensive_flight_search.py`.
+   - Use any standard date format (examples above).
+
+3. **Run the Tool**
    ```bash
    python3 comprehensive_flight_search.py
    ```
@@ -74,6 +114,7 @@ This project is a robust, multi-threaded tool for generating and analyzing all p
 ## Key Modifications to google-flights-scraper
 - **Thread Safety:** Refactored to allow multiple concurrent scraper instances.
 - **Airline Filtering:** Added strict Turkish Airlines-only and IST routing filters.
+- **Date Configuration:** Added centralized date management with automatic format conversion for both search logic and Google Flights interface.
 - **Robust Error Handling:** Improved handling of missing data, timeouts, and Google Flights quirks.
 - **Atomic File Writes:** Ensured all progress/results are saved safely in multi-threaded environments.
 
@@ -89,6 +130,7 @@ This project is a robust, multi-threaded tool for generating and analyzing all p
 ---
 
 ## How to Extend or Modify
+- **Change Departure Date:** Simply edit the `departure_date` variable in the `main()` function.
 - **Change Visa Rules:** Edit `utils.py` to update which countries are considered "easy visa".
 - **Adjust Threading/Performance:** Change `max_workers` and `rate_limit_delay` in `comprehensive_flight_search.py`.
 - **Add More Cities:** Update `COUNTRY_MAJOR_CITIES` in `utils.py`.

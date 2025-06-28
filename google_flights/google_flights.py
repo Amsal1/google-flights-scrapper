@@ -2,6 +2,7 @@
 Patched google_flights.py to:
 - Use English selectors
 - Target INR currency
+- Fixed Departure airport & date input
 - Add airline_filter to extract only Turkish Airlines results
 - Headless optional via init param
 """
@@ -11,9 +12,10 @@ from selectolax.lexbor import LexborHTMLParser
 import time
 
 class GoogleFlights:
-    def __init__(self, headless=True, airline_filter=None):
+    def __init__(self, headless=True, airline_filter=None, formatted_date="October 3, 2025"):
         self.headless = headless
         self.airline_filter = airline_filter
+        self.formatted_date = formatted_date
 
     def _extract(self, origin, destination, departure_date, passengers=1):
         with sync_playwright() as p:
@@ -62,7 +64,7 @@ class GoogleFlights:
                 page.get_by_role("textbox", name="Departure").click()
                 page.get_by_role("textbox", name="Departure").fill(departure_date)
                 page.get_by_role("textbox", name="Departure").press("Enter")
-                formatted_date = "October 3, 2025"
+                formatted_date = self.formatted_date
                 time.sleep(0.7)
                 # page.click("div:has-text('one way price')")
                 aria_label = f"Done. Search for one-way flights, departing on {formatted_date}"

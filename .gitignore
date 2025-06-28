@@ -2,3 +2,5 @@
 __pycache__
 google_flights/__pycache__
 user_data
+flight_search_progress.json
+flight_search_results.json

@@ -20,14 +20,58 @@ from google_flights.google_flights import GoogleFlights
 from route_planner import generate_all_possible_combinations, print_route_summary
 from utils import COUNTRY_MAJOR_CITIES
 
+def parse_date_input(date_str):
+    """Parse various date input formats and return a datetime object"""
+    # Common date formats users might input
+    formats = [
+        "%d %b %Y",      # "2 Oct 2025"
+        "%d %B %Y",      # "2 October 2025"
+        "%Y-%m-%d",      # "2025-10-02"
+        "%d/%m/%Y",      # "02/10/2025"
+        "%d-%m-%Y",      # "02-10-2025"
+        "%B %d, %Y",     # "October 2, 2025"
+        "%b %d, %Y",     # "Oct 2, 2025"
+    ]
+    
+    for fmt in formats:
+        try:
+            return datetime.strptime(date_str, fmt)
+        except ValueError:
+            continue
+    
+    raise ValueError(f"Unable to parse date: {date_str}. Try formats like '2 Oct 2025' or '2025-10-02'")
+
+def date_to_google_flights_format(date_obj):
+    """Convert datetime object to Google Flights format: 'October 2, 2025'"""
+    # Use platform-independent method to remove leading zeros
+    day = date_obj.day
+    month = date_obj.strftime("%B")
+    year = date_obj.year
+    return f"{month} {day}, {year}"
+
+def date_to_short_format(date_obj):
+    """Convert datetime object to short format: 'Thu, Oct 2'"""
+    # Use platform-independent method to remove leading zeros
+    weekday = date_obj.strftime("%a")
+    month = date_obj.strftime("%b")
+    day = date_obj.day
+    return f"{weekday}, {month} {day}"
+
 class TurkishAirlinesOptimizer:
     def __init__(self, headless=True, max_routes_to_search=20, max_workers=4, rate_limit_delay=2, 
-                 progress_file="flight_search_progress.json", results_file="flight_search_results.json"):
+                 progress_file="flight_search_progress.json", results_file="flight_search_results.json", 
+                 departure_date="2 Oct 2025"):
         self.max_routes_to_search = max_routes_to_search
         self.max_workers = max_workers  # Number of concurrent threads
         self.rate_limit_delay = rate_limit_delay  # Delay between requests per thread
         self.progress_file = progress_file  # File to track completed routes
         self.results_file = results_file   # File to store all results
+        
+        # Parse and store departure date in multiple formats
+        self.departure_date_obj = parse_date_input(departure_date)
+        self.departure_date_short = date_to_short_format(self.departure_date_obj)  # "Thu, Oct 2"
+        self.departure_date_google = date_to_google_flights_format(self.departure_date_obj)  # "October 2, 2025"
+        
         self.results = {}
         self.results_lock = threading.Lock()  # Thread-safe results collection
         self.progress_lock = threading.Lock()  # Thread-safe progress tracking
@@ -35,6 +79,8 @@ class TurkishAirlinesOptimizer:
         self.completed_count = 0
         self.failed_count = 0
         self.completed_routes = set()  # Track completed route signatures
+        
+        print(f"📅 Departure date configured: {departure_date} → {self.departure_date_short} (search) / {self.departure_date_google} (Google Flights)")
         
         # Load existing progress on startup
         self.load_existing_progress()
@@ -276,7 +322,7 @@ class TurkishAirlinesOptimizer:
     
     def create_scraper(self, headless=True):
         """Create a new GoogleFlights instance for thread-local use"""
-        return GoogleFlights(headless=headless, airline_filter="Turkish Airlines")
+        return GoogleFlights(headless=headless, airline_filter="Turkish Airlines", formatted_date=self.departure_date_google)
     
     def update_progress(self, success=True, discarded=False):
         """Thread-safe progress tracking with early termination stats"""
@@ -295,8 +341,12 @@ class TurkishAirlinesOptimizer:
                 discarded_info = f", {getattr(self, 'discarded_count', 0)} discarded" if hasattr(self, 'discarded_count') else ""
                 print(f"📊 Progress: {self.completed_count} completed, {self.failed_count} failed{discarded_info}, {total_processed}/{self.max_routes_to_search} total")
     
-    def search_route_flights(self, route, scraper, route_index, departure_date="Fri, Oct 3"):
+    def search_route_flights(self, route, scraper, route_index, departure_date=None):
         """Search for flights for each segment of a route (thread-safe version with early termination)"""
+        # Use the instance departure date if no specific date is provided
+        if departure_date is None:
+            departure_date = self.departure_date_short
+        
         route_flights = []
         total_cost = 0
         
@@ -642,6 +692,16 @@ def main():
     print("🇹🇷 Turkish Airlines 1M Miles Challenge - Multi-Threaded Flight Search with Resume & Early Termination")
     print("="*100)
     
+    # Date Configuration - Change this to customize your departure date
+    departure_date = "2 Oct 2025"  # Format: "2 Oct 2025", "2025-10-02", "October 2, 2025", etc.
+    
+    # You can also parse from command line arguments if needed:
+    # import sys
+    # if len(sys.argv) > 1:
+    #     departure_date = sys.argv[1]
+    
+    print(f"📅 Departure date: {departure_date}")
+    
     # Generate all possible route combinations for comprehensive analysis
     print("\n📋 Generating ALL possible route combinations...")
     routes = generate_all_possible_combinations()
@@ -669,7 +729,7 @@ def main():
     # Configuration for different scales
     if total_routes > 40000:
         # For very large datasets, process in manageable chunks
-        max_routes_to_search = min(20, total_routes)  # Process 1000 routes at a time
+        max_routes_to_search = min(5000, total_routes)  # Process 5000 routes at a time
         print(f"\n⚠️  Very large dataset detected ({total_routes:,} routes)")
         print(f"📊 Processing in chunks of {max_routes_to_search} routes")
         print(f"💡 Run multiple times to process all routes incrementally")
@@ -711,7 +771,8 @@ def main():
         max_workers=max_workers,
         rate_limit_delay=rate_limit_delay,
         progress_file="flight_search_progress.json",
-        results_file="flight_search_results.json"
+        results_file="flight_search_results.json",
+        departure_date=departure_date
     )
     
     # Search for flights
